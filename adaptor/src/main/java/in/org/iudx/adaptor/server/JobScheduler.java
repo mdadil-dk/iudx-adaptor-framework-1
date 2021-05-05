@@ -15,6 +15,7 @@ import org.quartz.impl.triggers.CronTriggerImpl;
 import in.org.iudx.adaptor.server.flink.FlinkClientService;
 import in.org.iudx.adaptor.server.flink.FlinkClientServiceImpl;
 import in.org.iudx.adaptor.server.util.FlinkJobExecute;
+import in.org.iudx.adaptor.server.util.SimpleCacheManager;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -33,7 +34,7 @@ import java.util.List;
 public class JobScheduler {
 
   private Scheduler scheduler;
-  private FlinkClientService flinkClient;
+  private static FlinkClientService flinkClient;
   private static final Logger LOGGER = LogManager.getLogger(JobScheduler.class);
   
   /**
@@ -46,9 +47,17 @@ public class JobScheduler {
   public JobScheduler(FlinkClientService flinkClient, String propertiesName) throws SchedulerException {
     
     this.flinkClient = flinkClient;
+    
+    //SimpleCacheManager.getInstance().put("obj", this.flinkClient);
+    
     SchedulerFactory factory = new StdSchedulerFactory(propertiesName);
     scheduler = factory.getScheduler();
     scheduler.start();
+  }
+  
+  public static FlinkClientService JobScheduler() {
+    
+    return flinkClient;
   }
   
   /**
@@ -83,8 +92,8 @@ public class JobScheduler {
     String cronExpression = config.getString("schedulePattern");
     final JobDetailImpl jobDetail = new JobDetailImpl();
     jobDetail.setKey(jobId);
-
-    // jobDetail.getJobDataMap().put("flinkClient", this.flinkClient);
+    
+    //jobDetail.getJobDataMap().put("flinkClient", "obj");
     jobDetail.getJobDataMap().put("data", config.encode());
 
     jobDetail.setJobClass(FlinkJobExecute.class);
@@ -97,7 +106,7 @@ public class JobScheduler {
         handler.handle(Future.failedFuture(new JsonObject().put(STATUS, FAILED).toString()));
         return this;
       } else {
-        scheduler.getContext().put("flinkClient", this.flinkClient);
+        //scheduler.getContext().put("flinkClient", this.flinkClient);
         scheduler.getContext().put("data",config.encode());
         trigger.setCronExpression(cronExpression);
         scheduler.scheduleJob(jobDetail, trigger);
